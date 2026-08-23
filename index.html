@@ -198,6 +198,7 @@
       <select id="foff"><option value="">All offices</option></select>
       <select id="fband"><option value="">All bands</option><option>Very Low</option><option>Below Working Knowledge</option><option>Working Knowledge</option><option>Proficient</option></select>
       <select id="fgap"><option value="">Any gap count</option><option value="1">At least 1 gap</option><option value="5">5+ gaps</option><option value="0">No gaps</option></select>
+      <select id="fcluster"><option value="">Any training need</option></select>
       <button class="reset" id="reset">Reset</button>
       <span class="count" id="count"></span>
     </div>
@@ -205,7 +206,7 @@
       <thead><tr>
         <th data-k="label">Name</th><th data-k="poscode">Pos.</th><th data-k="position" class="hidesm">Position family</th><th data-k="region" class="hidesm">Region</th><th data-k="officecode" class="hidesm">Office</th>
         <th data-k="overall" class="num">Overall</th><th data-k="band" class="hidesm">Band</th>
-        <th data-k="gaps" class="num">Gaps</th><th data-k="role" class="hidesm">Role</th>
+        <th data-k="gaps" class="num">Gaps</th><th data-k="role" class="hidesm">Role</th><th id="needTh" class="num" style="display:none"></th>
       </tr></thead><tbody id="rows"></tbody>
     </table></div>
   </section>
@@ -333,26 +334,40 @@ function initPeople(){
   const freg=document.getElementById('freg');[...new Set(D.people.map(p=>p.region).filter(Boolean))].forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;freg.appendChild(o);});
   const offcodes=[...new Set(D.people.map(p=>p.officecode).filter(Boolean))].sort();
   if(offcodes.length){const foff=document.getElementById('foff');offcodes.forEach(o=>{const op=document.createElement('option');op.value=o;op.textContent=o;foff.appendChild(op);});}
-  ['q','fpos','freg','foff','fband','fgap'].forEach(id=>document.getElementById(id).addEventListener('input',renderPeople));
-  document.getElementById('reset').onclick=()=>{['q','fpos','freg','foff','fband','fgap'].forEach(id=>document.getElementById(id).value='');renderPeople();};
+  const fcl=document.getElementById('fcluster');CL.forEach(c=>{const op=document.createElement('option');op.value=c;op.textContent='Needs: '+(SHORT[c]||c);fcl.appendChild(op);});
+  ['q','fpos','freg','foff','fband','fgap','fcluster'].forEach(id=>document.getElementById(id).addEventListener('input',renderPeople));
+  document.getElementById('reset').onclick=()=>{['q','fpos','freg','foff','fband','fgap','fcluster'].forEach(id=>document.getElementById(id).value='');renderPeople();};
   document.querySelectorAll('#p-people thead th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(!k)return;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=(k==='overall'||k==='gaps')?-1:1;}renderPeople();});
   renderPeople();
 }
 function renderPeople(){
   const q=document.getElementById('q').value.toLowerCase().trim();
-  const fp=document.getElementById('fpos').value,fr=document.getElementById('freg').value,fo=document.getElementById('foff').value,fb=document.getElementById('fband').value,fg=document.getElementById('fgap').value;
+  const fp=document.getElementById('fpos').value,fr=document.getElementById('freg').value,fo=document.getElementById('foff').value,fb=document.getElementById('fband').value,fg=document.getElementById('fgap').value,fc=document.getElementById('fcluster').value;
   let v=D.people.filter(p=>{
     if(q&&!((p.label||'').toLowerCase().includes(q)||(p.position||'').toLowerCase().includes(q)))return false;
     if(fp&&p.position!==fp)return false; if(fr&&p.region!==fr)return false; if(fo&&p.officecode!==fo)return false; if(fb&&p.band!==fb)return false;
     const g=gaps(p); if(fg==='1'&&g<1)return false; if(fg==='5'&&g<5)return false; if(fg==='0'&&g!==0)return false;
     return true;});
-  v.sort((a,b)=>{let x=sortKey==='gaps'?gaps(a):a[sortKey],y=sortKey==='gaps'?gaps(b):b[sortKey];if(typeof x==='string'){x=x.toLowerCase();y=y.toLowerCase();}return x<y?-sortDir:x>y?sortDir:0;});
-  document.getElementById('rows').innerHTML=v.map(p=>`<tr data-id="${p._id}">
+  // toggle the dynamic "Need score" column header
+  const needTh=document.getElementById('needTh');
+  if(fc){needTh.style.display='';needTh.textContent=(SHORT[fc]||fc)+' score';}
+  else{needTh.style.display='none';}
+  if(fc){
+    // sort by that cluster's score, weakest first (nulls last)
+    v.sort((a,b)=>{const x=a.clusters[fc],y=b.clusters[fc];if(x==null&&y==null)return 0;if(x==null)return 1;if(y==null)return -1;return x-y;});
+  }else{
+    v.sort((a,b)=>{let x=sortKey==='gaps'?gaps(a):a[sortKey],y=sortKey==='gaps'?gaps(b):b[sortKey];if(typeof x==='string'){x=x.toLowerCase();y=y.toLowerCase();}return x<y?-sortDir:x>y?sortDir:0;});
+  }
+  document.getElementById('rows').innerHTML=v.map(p=>{
+    let needCell='';
+    if(fc){const sv=p.clusters[fc];const bnd=sv==null?'':sv<2?'Very Low':sv<3?'Below Working Knowledge':sv<4?'Working Knowledge':'Proficient';
+      needCell=`<td class="num"><span class="pill ${bandClass(bnd)}">${sv==null?'\u2013':fmt(sv)}</span></td>`;}
+    return `<tr data-id="${p._id}">
     <td class="name">${esc(p.label)}${personDone(p._id)?'<span class="trainedchip">trained</span>':''}</td>
     <td><span class="poschip">${esc(p.poscode)}</span></td>
     <td class="pos hidesm">${esc(p.position)}</td><td class="hidesm">${esc(p.region||'')}</td><td class="hidesm"><span class="poschip">${esc(p.officecode||'')}</span></td>
     <td class="num">${fmt(p.overall)}</td><td class="hidesm"><span class="pill ${bandClass(p.band)}">${esc(p.band)}</span></td>
-    <td class="num">${gaps(p)}</td><td class="hidesm"><span class="rolechip ${p.role.toLowerCase()}">${esc(p.role)}</span></td></tr>`).join('');
+    <td class="num">${gaps(p)}</td><td class="hidesm"><span class="rolechip ${p.role.toLowerCase()}">${esc(p.role)}</span></td>${needCell}</tr>`;}).join('');
   document.querySelectorAll('#rows tr').forEach(tr=>tr.onclick=()=>openModal(tr.dataset.id));
   document.getElementById('count').textContent=v.length+' of '+D.people.length;
 }

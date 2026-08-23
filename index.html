@@ -195,6 +195,7 @@
       <input type="search" id="q" placeholder="Search name or position">
       <select id="fpos"><option value="">All positions</option></select>
       <select id="freg"><option value="">All regions</option></select>
+      <select id="foff" style="display:none"><option value="">All offices</option></select>
       <select id="fband"><option value="">All bands</option><option>Very Low</option><option>Below Working Knowledge</option><option>Working Knowledge</option><option>Proficient</option></select>
       <select id="fgap"><option value="">Any gap count</option><option value="1">At least 1 gap</option><option value="5">5+ gaps</option><option value="0">No gaps</option></select>
       <button class="reset" id="reset">Reset</button>
@@ -330,17 +331,19 @@ let sortKey='overall',sortDir=-1;
 function initPeople(){
   const fpos=document.getElementById('fpos');[...new Set(D.people.map(p=>p.position))].forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p;fpos.appendChild(o);});
   const freg=document.getElementById('freg');[...new Set(D.people.map(p=>p.region).filter(Boolean))].forEach(r=>{const o=document.createElement('option');o.value=r;o.textContent=r;freg.appendChild(o);});
-  ['q','fpos','freg','fband','fgap'].forEach(id=>document.getElementById(id).addEventListener('input',renderPeople));
-  document.getElementById('reset').onclick=()=>{['q','fpos','freg','fband','fgap'].forEach(id=>document.getElementById(id).value='');renderPeople();};
+  const offices=[...new Set(D.people.map(p=>p.office).filter(Boolean))].sort();
+  if(offices.length){const foff=document.getElementById('foff');foff.style.display='';offices.forEach(o=>{const op=document.createElement('option');op.value=o;op.textContent=o;foff.appendChild(op);});}
+  ['q','fpos','freg','foff','fband','fgap'].forEach(id=>document.getElementById(id).addEventListener('input',renderPeople));
+  document.getElementById('reset').onclick=()=>{['q','fpos','freg','foff','fband','fgap'].forEach(id=>document.getElementById(id).value='');renderPeople();};
   document.querySelectorAll('#p-people thead th').forEach(th=>th.onclick=()=>{const k=th.dataset.k;if(!k)return;if(sortKey===k)sortDir*=-1;else{sortKey=k;sortDir=(k==='overall'||k==='gaps')?-1:1;}renderPeople();});
   renderPeople();
 }
 function renderPeople(){
   const q=document.getElementById('q').value.toLowerCase().trim();
-  const fp=document.getElementById('fpos').value,fr=document.getElementById('freg').value,fb=document.getElementById('fband').value,fg=document.getElementById('fgap').value;
+  const fp=document.getElementById('fpos').value,fr=document.getElementById('freg').value,fo=document.getElementById('foff').value,fb=document.getElementById('fband').value,fg=document.getElementById('fgap').value;
   let v=D.people.filter(p=>{
     if(q&&!((p.label||'').toLowerCase().includes(q)||(p.position||'').toLowerCase().includes(q)))return false;
-    if(fp&&p.position!==fp)return false; if(fr&&p.region!==fr)return false; if(fb&&p.band!==fb)return false;
+    if(fp&&p.position!==fp)return false; if(fr&&p.region!==fr)return false; if(fo&&p.office!==fo)return false; if(fb&&p.band!==fb)return false;
     const g=gaps(p); if(fg==='1'&&g<1)return false; if(fg==='5'&&g<5)return false; if(fg==='0'&&g!==0)return false;
     return true;});
   v.sort((a,b)=>{let x=sortKey==='gaps'?gaps(a):a[sortKey],y=sortKey==='gaps'?gaps(b):b[sortKey];if(typeof x==='string'){x=x.toLowerCase();y=y.toLowerCase();}return x<y?-sortDir:x>y?sortDir:0;});
@@ -370,7 +373,7 @@ let CURRENT=null;
 function openModal(id){
   const p=D.people.find(x=>x._id===id);if(!p)return;CURRENT=p;
   document.getElementById('m-code').textContent=p.label;
-  document.getElementById('m-meta').textContent=[p.position,p.region,p.role].filter(Boolean).join('  \u00b7  ');
+  document.getElementById('m-meta').textContent=[p.position,(p.office||p.region),p.role].filter(Boolean).join('  \u00b7  ');
   document.getElementById('m-ov').textContent=fmt(p.overall);
   const bd=document.getElementById('m-bd');bd.textContent=p.band;bd.className='n '+bandClass(p.band);
   document.getElementById('m-gp').textContent=gaps(p)+' of 11';

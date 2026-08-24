@@ -160,6 +160,15 @@
   .finding{display:grid;grid-template-columns:26px 1fr;gap:12px;align-items:start;font-size:13px;color:var(--ink)}
   .finding .fn{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center}
   .summary-foot{font-size:12.5px;color:var(--ink2);border-top:1px solid var(--line);padding-top:10px;margin-top:12px}
+  /* heatmap */
+  table.heat{border-collapse:collapse;font-size:11.5px;width:100%}
+  table.heat th{position:static;padding:6px 5px;text-align:center;font-size:10px;font-weight:600;color:var(--ink2);white-space:nowrap;border-bottom:1px solid var(--line)}
+  table.heat th.rh,table.heat td.rh{text-align:left;white-space:nowrap;font-weight:600;color:var(--ink);padding-right:10px}
+  table.heat td{padding:7px 6px;text-align:center;font-variant-numeric:tabular-nums;font-weight:600;border:1px solid #fff;min-width:46px}
+  .heat-leg{display:flex;align-items:center;gap:5px;margin-top:10px;font-size:11px;color:var(--ink2)}
+  .heat-leg .sw{width:20px;height:12px;border-radius:2px;display:inline-block}
+  /* group justification */
+  .gjust{background:#f3f7fb;border:1px solid #dbe7f1;border-radius:9px;padding:11px 13px;font-size:12.5px;color:var(--ink);margin-bottom:10px;line-height:1.55}
 </style>
 </head>
 <body>
@@ -205,6 +214,8 @@
       <div class="card"><div class="hd">Proficiency by position family</div><div class="bd" id="posbars"></div></div>
       <div class="card"><div class="hd">Training demand by cluster <span class="muted" style="font-weight:400">&middot; people below 3.0</span></div><div class="bd" id="dembars"></div></div>
     </div>
+    <div class="sec"><h2>Capability heatmap</h2><div class="rule"></div><div class="hint">position family &times; cluster &middot; average score</div></div>
+    <div class="card" style="padding:14px;overflow:auto"><div id="heatmap"></div></div>
   </section>
 
   <section class="panel" id="p-people">
@@ -257,6 +268,7 @@
 
   <section class="panel" id="p-tracker">
     <p class="lead">Each learner has an individual checklist built from their own training needs (the clusters where they score below 3.0). Tick a training when done and record the date, training title, place, and any notes. Progress saves in this browser; use Export to keep a file or move it between devices.</p>
+    <div id="trkProgress"></div>
     <div class="toolbar">
       <button class="btn" id="exp">Export progress</button>
       <button class="btn ghost" id="impBtn">Import progress</button>
@@ -485,15 +497,44 @@ function needsView(){
 
 /* ---- groups (cohort scheduling) ---- */
 function groupsView(){
-  const dem=[...D.cluster_demand].sort((a,b)=>b.below3-a.below3).filter(d=>d.below3>0);
-  document.getElementById('groups').innerHTML=dem.map(d=>{
+  const demAll=[...D.cluster_demand].sort((a,b)=>b.below3-a.below3);
+  const dem=demAll.filter(d=>d.below3>0);
+  document.getElementById('groups').innerHTML=dem.map((d,idx)=>{
+    const rank=idx+1;
     const ppl=D.people.filter(p=>p.clusters[d.cluster]!=null&&p.clusters[d.cluster]<3);
     const byPos={};ppl.forEach(p=>{(byPos[p.position]=byPos[p.position]||[]).push(p);});
     const rows=POS_ORDER.filter(pos=>byPos[pos]).map(pos=>{
       const list=byPos[pos].sort((a,b)=>a.clusters[d.cluster]-b.clusters[d.cluster]).map(p=>`${esc(p.label)} (${fmt(p.clusters[d.cluster])})`).join(', ');
       return `<div style="padding:6px 0;border-bottom:1px solid #f2f4f7;font-size:12.5px"><b>${esc(pos)}</b> <span class="muted">&middot; ${byPos[pos].length}</span><br>${list}</div>`;}).join('');
-    return `<div class="card" style="margin-bottom:14px"><div class="hd">${esc(d.cluster)} <span class="muted" style="font-weight:400">&middot; ${d.below3} learners &middot; cluster mean ${fmt(d.mean)}</span>${UNCOV.has(d.cluster)?' <span class="tag-none">no internal mentor</span>':''}</div><div class="bd">${rows}</div></div>`;
+    // justification
+    const scores=ppl.map(p=>p.clusters[d.cluster]);
+    const lowest=Math.min(...scores), avgGap=(scores.reduce((a,b)=>a+b,0)/scores.length);
+    const uncovered=UNCOV.has(d.cluster);
+    // mentor covering this cluster?
+    let mentorLine;
+    if(uncovered){mentorLine='No internal mentor volunteered for this cluster, so it is flagged for recruitment or an external resource person before scheduling.';}
+    else{
+      const mentorHere=D.people.find(p=>p.mentor&&mentorFocusClusters(p.mentor.focus).includes(d.cluster));
+      mentorLine=mentorHere? `An internal P2P mentor covers this cluster (${esc(mentorHere.mentor_shown||'assigned')}), so this group can be scheduled under the peer-to-practice program.` : 'A mentor assignment for this cluster should be confirmed from the Peer & mentors tab.';
+    }
+    const just=`This group exists because <b>${d.below3} focal persons score below the 3.0 Working Knowledge line</b> in ${esc(SHORT[d.cluster]||d.cluster)}. `+
+      `The cluster mean is <b>${fmt(d.mean)}</b>, ranking it <b>#${rank} of ${dem.length}</b> by number of people needing it (lowest individual score ${fmt(lowest)}; average score within the group ${fmt(avgGap)}). `+
+      `Grouping is by position family so the training can be pitched to what each role actually does. ${mentorLine}`;
+    return `<div class="card gcard" style="margin-bottom:14px">
+      <div class="hd gnode" style="cursor:pointer;display:flex;align-items:center;gap:8px">
+        <span class="chev">&#9654;</span>${esc(d.cluster)}
+        <span class="muted" style="font-weight:400">&middot; ${d.below3} learners &middot; cluster mean ${fmt(d.mean)} &middot; priority #${rank}</span>
+        ${uncovered?' <span class="tag-none">no internal mentor</span>':''}
+      </div>
+      <div class="gbody" style="display:none"><div class="bd">
+        <div class="gjust"><b>Why this group?</b><br>${just}</div>
+        ${rows}
+      </div></div></div>`;
   }).join('');
+  document.querySelectorAll('#groups .gcard .gnode').forEach(n=>n.onclick=()=>{
+    const card=n.closest('.gcard'),body=card.querySelector('.gbody'),open=body.style.display!=='none';
+    body.style.display=open?'none':'block';n.querySelector('.chev').style.transform=open?'':'rotate(90deg)';
+  });
 }
 
 /* ---- mentors ---- */
@@ -647,7 +688,34 @@ function refreshCardHeader(card){
   if(full&&!chip){const s=document.createElement('span');s.className='trainedchip';s.textContent='all done';card.querySelector('.poschip').after(s);}
   if(!full&&chip)chip.remove();
 }
-function updTrkCount(){const learners=D.people.filter(p=>p.role!=='Mentor');let full=0;learners.forEach(p=>{if(personDone(p._id))full++;});document.getElementById('trkcount').textContent=full+' of '+learners.length+' fully complete';}
+function updTrkCount(){const learners=D.people.filter(p=>p.role!=='Mentor');let full=0;learners.forEach(p=>{if(personDone(p._id))full++;});document.getElementById('trkcount').textContent=full+' of '+learners.length+' fully complete';renderTrkProgress();}
+function renderTrkProgress(){
+  const box=document.getElementById('trkProgress');if(!box)return;
+  const learners=D.people.filter(p=>p.role!=='Mentor');
+  // overall training items
+  let totItems=0,doneItems=0,peopleFull=0,peopleWithNeeds=0;
+  learners.forEach(p=>{const {done,total}=personDoneCount(p);totItems+=total;doneItems+=done;if(total>0)peopleWithNeeds++;if(total>0&&done===total)peopleFull++;});
+  const pct=totItems?Math.round(doneItems/totItems*100):0;
+  // per cluster progress
+  const perCluster=CL.map(c=>{
+    let t=0,dn=0;
+    learners.forEach(p=>{if(personNeeds(p).includes(c)){t++;if(itemState(p._id,c).done)dn++;}});
+    return {c,t,dn};
+  }).filter(x=>x.t>0).sort((a,b)=>b.t-a.t);
+  let html=`<div class="card" style="padding:14px 16px;margin-bottom:14px">
+    <div style="display:flex;flex-wrap:wrap;gap:22px;align-items:center;margin-bottom:10px">
+      <div><div style="font-size:24px;font-weight:700">${pct}%</div><div class="l" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink2)">Trainings completed</div></div>
+      <div><div style="font-size:24px;font-weight:700">${doneItems} / ${totItems}</div><div class="l" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink2)">Training items done</div></div>
+      <div><div style="font-size:24px;font-weight:700">${peopleFull} / ${peopleWithNeeds}</div><div class="l" style="font-size:10.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink2)">Learners fully trained</div></div>
+      <div style="flex:1;min-width:160px"><div class="prog" style="height:12px"><span style="width:${pct}%"></span></div></div>
+    </div>
+    <div class="hint" style="font-size:11.5px;color:var(--ink2);margin-bottom:6px">Progress by cluster</div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:8px">`;
+  perCluster.forEach(x=>{const p=x.t?Math.round(x.dn/x.t*100):0;
+    html+=`<div style="font-size:12px"><div style="display:flex;justify-content:space-between"><span>${esc(SHORT[x.c]||x.c)}</span><span class="muted">${x.dn}/${x.t}</span></div><div class="prog" style="margin-top:2px"><span style="width:${p}%"></span></div></div>`;});
+  html+='</div></div>';
+  box.innerHTML=html;
+}
 document.getElementById('tq').addEventListener('input',trkView);
 document.getElementById('tfilter').addEventListener('change',trkView);
 document.getElementById('tsort').addEventListener('change',trkView);
@@ -670,6 +738,32 @@ function commentsView(){
     const card=n.closest('.cmt-card'),det=card.querySelector('.cmt-detail'),open=det.style.display!=='none';
     det.style.display=open?'none':'block';n.querySelector('.chev').style.transform=open?'':'rotate(90deg)';
   });
+}
+
+/* ---- capability heatmap: position family x cluster ---- */
+function heatmapView(){
+  const fams=POS_ORDER.filter(pos=>D.people.some(p=>p.position===pos));
+  const cell=(v)=>{
+    if(v==null)return {bg:'#f0f0f0',fg:'#999',t:'\u2013'};
+    let bg;
+    if(v<2)bg='#c0392b'; else if(v<2.5)bg='#d46b4a'; else if(v<3)bg='#e0a458';
+    else if(v<3.5)bg='#cbb85a'; else if(v<4)bg='#8ba85a'; else bg='#4a8b5c';
+    return {bg,fg:'#fff',t:v.toFixed(2)};
+  };
+  function avg(pos,cl){const xs=D.people.filter(p=>p.position===pos&&p.clusters[cl]!=null).map(p=>p.clusters[cl]);return xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null;}
+  let html='<table class="heat"><thead><tr><th class="rh">Position \\ Cluster</th>';
+  CL.forEach(c=>html+=`<th title="${esc(c)}">${esc(SHORT[c]||c)}</th>`);
+  html+='<th>Overall</th></tr></thead><tbody>';
+  fams.forEach(pos=>{
+    const povr=D.position_summary.find(x=>x.position===pos);
+    html+=`<tr><td class="rh">${esc(pos)}</td>`;
+    CL.forEach(c=>{const v=avg(pos,c);const cc=cell(v);html+=`<td style="background:${cc.bg};color:${cc.fg}" title="${esc(pos)} \u2013 ${esc(SHORT[c]||c)}: ${cc.t}">${cc.t}</td>`;});
+    const oc=cell(povr?povr.mean:null);
+    html+=`<td style="background:${oc.bg};color:${oc.fg};font-weight:700">${oc.t}</td></tr>`;
+  });
+  html+='</tbody></table>';
+  html+='<div class="heat-leg"><span>Weakest</span><span class="sw" style="background:#c0392b"></span><span class="sw" style="background:#d46b4a"></span><span class="sw" style="background:#e0a458"></span><span class="sw" style="background:#cbb85a"></span><span class="sw" style="background:#8ba85a"></span><span class="sw" style="background:#4a8b5c"></span><span>Strongest</span></div>';
+  document.getElementById('heatmap').innerHTML=html;
 }
 
 /* ---- mind map ---- */
@@ -714,7 +808,7 @@ function syncStickyHeaders(){
 window.addEventListener('resize',syncStickyHeaders);
 syncStickyHeaders();
 
-loadTrk();overview();initPeople();needsView();groupsView();mentorsView();commentsView();mindmap();trkView();
+loadTrk();overview();heatmapView();initPeople();needsView();groupsView();mentorsView();commentsView();mindmap();trkView();
 syncStickyHeaders();
 </script>
 </body>

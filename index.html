@@ -52,9 +52,9 @@
   input[type=search]{min-width:210px;flex:1}
   .count{font-size:12.5px;color:var(--ink2);margin-left:auto}
   .reset{font-size:12.5px;color:var(--accent);background:none;border:none;cursor:pointer;font-weight:600}
-  .tablewrap{background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  .tablewrap{background:var(--card);border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow)}
   table{width:100%;border-collapse:collapse;font-size:13px}
-  thead th{position:sticky;top:52px;background:#eef1f6;text-align:left;padding:10px 12px;font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:var(--ink2);border-bottom:2px solid var(--line);cursor:pointer;white-space:nowrap;z-index:5}
+  thead th{position:sticky;background:#eef1f6;text-align:left;padding:10px 12px;font-size:11px;letter-spacing:.03em;text-transform:uppercase;color:var(--ink2);border-bottom:2px solid var(--line);cursor:pointer;white-space:nowrap;z-index:5}
   thead th.num{text-align:center}
   tbody td{padding:9px 12px;border-bottom:1px solid #eef1f5}
   tbody tr:last-child td{border-bottom:none}tbody tr:hover{background:#fafbfc;cursor:pointer}
@@ -190,7 +190,7 @@
   <section class="panel on" id="p-overview">
     <div class="summary">
       <h2 class="summary-h">Summary and key findings</h2>
-      <p>This dashboard presents the baseline results of the Capacity and Competency Assessment Tool (CCAT), completed by all 36 I-LEAD focal persons across seven offices in the Central Office and Regions XI and XII, under Memorandum Order No. CO.OED.26.03.217. It assesses staff across 93 skills grouped into 11 competency clusters. Results are analyzed by position family rather than office, because averaging by office lets the high scores of leadership mask the urgent needs of frontline staff.</p>
+      <p>This dashboard presents the baseline results of the Capacity and Competency Assessment Tool (CCAT), completed by <b>all 36 I-LEAD focal persons</b> across <b>seven offices</b> in the Central Office and Regions XI and XII, under Memorandum Order No. CO.OED.26.03.217. It assesses staff across <b>93 skills</b> grouped into <b>11 competency clusters</b>. Results are analyzed by <b>position family</b> rather than office, because averaging by office lets the high scores of leadership mask the urgent needs of frontline staff.</p>
       <div class="findings">
         <div class="finding"><div class="fn">1</div><div><b>A strong, workable baseline.</b> The overall mean is 3.19 of 5 (Working Knowledge). This is a capable team that understands its core duties; the task is to lift them toward independent and expert level, especially in the newer areas the I-LEAD Project introduces, not to train from scratch.</div></div>
         <div class="finding"><div class="fn">2</div><div><b>The gap is a transfer gap, not an absence.</b> Management and Leadership average 3.89 with no cluster below the line, while frontline delivery staff fall below Working Knowledge in most clusters (Technical Assistants 2.83, Technical Specialists 2.85, Development Management Officers 2.89). The expertise exists; it has not yet reached the field.</div></div>
@@ -705,7 +705,17 @@ function mindmap(){
 document.getElementById('mmExpand').onclick=()=>document.querySelectorAll('#mindmap .mm-fam').forEach(f=>f.classList.add('open'));
 document.getElementById('mmCollapse').onclick=()=>document.querySelectorAll('#mindmap .mm-fam').forEach(f=>f.classList.remove('open'));
 
+// keep table headers docked right below the sticky nav bar (fixes header/first-row overlap on scroll)
+function syncStickyHeaders(){
+  const nav=document.querySelector('nav.tabs');
+  const h=nav?Math.round(nav.getBoundingClientRect().height):46;
+  document.querySelectorAll('thead th').forEach(th=>th.style.top=h+'px');
+}
+window.addEventListener('resize',syncStickyHeaders);
+syncStickyHeaders();
+
 loadTrk();overview();initPeople();needsView();groupsView();mentorsView();commentsView();mindmap();trkView();
+syncStickyHeaders();
 </script>
 </body>
 </html>

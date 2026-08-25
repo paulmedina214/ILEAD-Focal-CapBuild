@@ -140,18 +140,37 @@
   .cmt .gen{font-style:italic}
   .held{font-size:11.5px;color:var(--gap);margin-top:6px}
   /* mind map */
-  .mm-root{font-weight:700;font-size:15px;color:#fff;background:var(--ink);display:inline-block;padding:8px 14px;border-radius:8px;margin-bottom:6px}
-  .mm-fam{margin:10px 0 4px 8px;border-left:2px solid var(--line);padding-left:14px}
-  .mm-fam>.node{cursor:pointer;font-weight:700;font-size:13.5px;color:var(--accent);padding:5px 0;display:flex;align-items:center;gap:8px}
-  .mm-fam>.node .chev{font-size:11px;transition:transform .15s;color:var(--ink2)}
-  .mm-fam.open>.node .chev{transform:rotate(90deg)}
-  .mm-fam .kids{display:none;margin-left:10px;border-left:2px dotted var(--line);padding-left:14px}
-  .mm-fam.open .kids{display:block}
-  .mm-cluster{font-size:12.5px;padding:4px 0;display:grid;grid-template-columns:1fr auto;gap:10px;align-items:center}
-  .mm-cluster .cl{color:var(--ink)}
-  .mm-cluster .who{font-size:11px}
-  .mm-cluster .who.grp{color:var(--ok)}.mm-cluster .who.none{color:var(--gap)}
-  .mm-count{font-size:11px;color:var(--ink2);font-weight:400}
+  /* mind map tree */
+  .tree{display:flex;align-items:flex-start;gap:0;min-width:640px}
+  .troot-wrap{display:flex;align-items:center;padding-top:14px}
+  .tnode{border-radius:9px;padding:10px 14px;font-size:13px;font-weight:600}
+  .troot{background:var(--ink);color:#fff;text-align:center;line-height:1.25;box-shadow:var(--shadow)}
+  .tbranches{display:flex;flex-direction:column;gap:10px;position:relative;padding-left:34px}
+  /* trunk line from root into the branch stack */
+  .tbranches::before{content:"";position:absolute;left:0;top:24px;bottom:24px;width:2px;background:var(--line)}
+  .tbranch{position:relative}
+  /* elbow connector from trunk to each family node */
+  .tbranch::before{content:"";position:absolute;left:-34px;top:24px;width:34px;height:2px;background:var(--line)}
+  .tfam{background:#fff;border:1px solid var(--line);border-left:4px solid var(--accent);box-shadow:var(--shadow);cursor:pointer;display:flex;flex-direction:column;position:relative;max-width:340px}
+  .tfam-ok{border-left-color:var(--ok)}
+  .tfam-name{font-weight:700;font-size:13.5px;color:var(--ink)}
+  .tfam-meta{font-size:11.5px;color:var(--ink2);font-weight:400;margin-top:1px}
+  .tchevron{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--ink2);transition:transform .15s}
+  .tbranch.open .tchevron{transform:translateY(-50%) rotate(90deg)}
+  /* leaves (clusters) revealed on expand, with their own connector spine */
+  .tleaves{display:none;margin:8px 0 4px 40px;position:relative;padding-left:22px}
+  .tleaves::before{content:"";position:absolute;left:0;top:14px;bottom:14px;width:2px;background:var(--line)}
+  .tbranch.open .tleaves{display:block}
+  .tleaf{position:relative;background:#f8fafc;border:1px solid var(--line);border-radius:7px;padding:7px 11px;margin:6px 0;max-width:300px;cursor:pointer;transition:background .12s,border-color .12s}
+  .tleaf[data-cluster]:hover{background:#eef4fb;border-color:var(--accent)}
+  .tleaf-static{cursor:default}
+  .tleaf-go{color:var(--accent);font-weight:700;opacity:0;transition:opacity .12s}
+  .tleaf[data-cluster]:hover .tleaf-go{opacity:1}
+  .tleaf::before{content:"";position:absolute;left:-22px;top:50%;width:22px;height:2px;background:var(--line)}
+  .tleaf-name{font-size:12.5px;font-weight:600;color:var(--ink)}
+  .tleaf-meta{font-size:11px;color:var(--ink2);margin-top:1px}
+  .tleaf .who{font-weight:600}
+  .tleaf .who.grp{color:var(--ok)}.tleaf .who.none{color:var(--gap)}
   /* summary panel */
   .summary{background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;box-shadow:var(--shadow);padding:18px 22px;margin-bottom:22px}
   .summary-h{font-size:17px;margin-bottom:10px}
@@ -161,7 +180,9 @@
   .finding .fn{width:24px;height:24px;border-radius:50%;background:var(--accent);color:#fff;font-weight:700;font-size:12px;display:flex;align-items:center;justify-content:center}
   .summary-foot{font-size:12.5px;color:var(--ink2);border-top:1px solid var(--line);padding-top:10px;margin-top:12px}
   /* heatmap */
-  table.heat{border-collapse:collapse;font-size:11.5px;width:100%}
+  table.heat{border-collapse:collapse;font-size:11.5px;width:100%;table-layout:fixed}
+  table.heat col.cl{width:7.2%}
+  table.heat col.rhc{width:16%}
   table.heat th{position:static;padding:6px 5px;text-align:center;font-size:10px;font-weight:600;color:var(--ink2);white-space:nowrap;border-bottom:1px solid var(--line)}
   table.heat th.rh,table.heat td.rh{text-align:left;white-space:nowrap;font-weight:600;color:var(--ink);padding-right:10px}
   table.heat td{padding:7px 6px;text-align:center;font-variant-numeric:tabular-nums;font-weight:600;border:1px solid #fff;min-width:46px}
@@ -169,6 +190,7 @@
   .heat-leg .sw{width:20px;height:12px;border-radius:2px;display:inline-block}
   /* group justification */
   .gjust{background:#f3f7fb;border:1px solid #dbe7f1;border-radius:9px;padding:11px 13px;font-size:12.5px;color:var(--ink);margin-bottom:10px;line-height:1.55}
+  .cmt-rationale{font-size:12.5px;color:var(--ink2);margin-top:3px;line-height:1.5;font-weight:400}
 </style>
 </head>
 <body>
@@ -219,7 +241,7 @@
   </section>
 
   <section class="panel" id="p-people">
-    <p class="lead">Every focal person with position, overall score, band, and number of clusters below 3.0. Click a row for the full profile: cluster scores, individual training needs, specific skill gaps, self-reported priorities, mentorship, and a button to mark training done.</p>
+    <p class="lead"><b>What this shows:</b> Every focal person with position, overall score, band, and number of clusters below 3.0. Click a row for the full profile: cluster scores, individual training needs, specific skill gaps, self-reported priorities, mentorship, and a button to mark training done.</p>
     <div class="controls">
       <input type="search" id="q" placeholder="Search name or position">
       <select id="fpos"><option value="">All positions</option></select>
@@ -241,33 +263,33 @@
   </section>
 
   <section class="panel" id="p-needs">
-    <p class="lead">Consolidated training needs. Each cluster below 3.0 is a training area; the people who need it are grouped by position family, and each is marked whether a P2P group/mentor already covers them or whether it is still an open need. Clusters with no internal mentor are flagged for recruitment.</p>
+    <p class="lead"><b>What this shows:</b> Consolidated training needs. Each cluster below 3.0 is a training area; the people who need it are grouped by position family, and each is marked whether a P2P group/mentor already covers them or whether it is still an open need. Clusters with no internal mentor are flagged for recruitment.</p>
     <div id="needs"></div>
   </section>
 
   <section class="panel" id="p-groups">
-    <p class="lead">Learners grouped by shared training need for scheduling: each cluster with its below-3.0 people, split by position family.</p>
+    <p class="lead"><b>What this shows:</b> Learners grouped by shared training need for scheduling: each cluster with its below-3.0 people, split by position family.</p>
     <div id="groups"></div>
   </section>
 
   <section class="panel" id="p-mentors">
-    <p class="lead">P2P mentorship structure. Seven founding mentors each lead a mentee group by shared gap. Additional staff who offered to help in their CCAT responses are listed as reserve peer resources. Two clusters have no mentor and need recruitment.</p>
+    <p class="lead"><b>What this shows:</b> P2P mentorship structure. Seven founding mentors each lead a mentee group by shared gap. Additional staff who offered to help in their CCAT responses are listed as reserve peer resources. Two clusters have no mentor and need recruitment.</p>
     <div id="mentors"></div>
   </section>
 
   <section class="panel" id="p-comments">
-    <p class="lead">Consolidated view of what people wrote in their CCAT comments, summarized by cluster into recurring themes (no names). The count is how many comments touched that cluster. Individual comments appear inside each person's profile.</p>
+    <p class="lead"><b>What this shows:</b> Consolidated view of what people wrote in their CCAT comments, summarized by cluster into recurring themes (no names). The count is how many comments touched that cluster. Individual comments appear inside each person's profile.</p>
     <div id="comments"></div>
   </section>
 
   <section class="panel" id="p-mindmap">
-    <p class="lead">Capability map: the I-LEAD Capability Plan branches into position families, then the priority gap clusters each family needs, then who mentors that gap. Click a position family to expand or collapse its branch. It shows the transfer-gap structure at a glance.</p>
+    <p class="lead"><b>What this shows:</b> a tree of the capability plan. The root is the I-LEAD Capability Plan; it branches into the seven position families. Click a family to branch out its gap clusters; click any cluster to jump to the list of everyone who needs it. Read it left to right: Plan &rarr; who &rarr; what they need &rarr; who helps.</p>
     <div class="toolbar"><button class="btn ghost sm" id="mmExpand">Expand all</button><button class="btn ghost sm" id="mmCollapse">Collapse all</button></div>
     <div id="mindmap" class="card" style="padding:16px;overflow:auto"></div>
   </section>
 
   <section class="panel" id="p-tracker">
-    <p class="lead">Each learner has an individual checklist built from their own training needs (the clusters where they score below 3.0). Tick a training when done and record the date, training title, place, and any notes. Progress saves in this browser; use Export to keep a file or move it between devices.</p>
+    <p class="lead"><b>What this shows:</b> Each learner has an individual checklist built from their own training needs (the clusters where they score below 3.0). Tick a training when done and record the date, training title, place, and any notes. Progress saves in this browser; use Export to keep a file or move it between devices.</p>
     <div id="trkProgress"></div>
     <div class="toolbar">
       <button class="btn" id="exp">Export progress</button>
@@ -731,7 +753,16 @@ function commentsView(){
   const html=order.filter(cl=>cc[cl]).map(cl=>{
     const c=cc[cl]; const raw=cbc[cl]||[];
     const list=raw.length? '<div class="cmt-list" style="margin-top:8px">'+raw.map(t=>`<div class="cmt">${esc(t)}</div>`).join('')+'</div>' : '<div class="muted" style="font-size:12px;margin-top:6px">No individual comments to show.</div>';
-    return `<div class="card cmt-card"><div class="hd cmt-node" style="cursor:pointer;display:flex;align-items:center;gap:8px"><span class="chev">&#9654;</span>${esc(cl)} <span class="cn">&middot; ${c.n} comments</span></div><div class="bd"><div class="cmt-sum">${esc(c.summary)}</div><div class="cmt-detail" style="display:none">${list}</div></div></div>`;
+    return `<div class="card cmt-card">
+      <div class="hd cmt-node" style="cursor:pointer;display:flex;align-items:flex-start;gap:8px">
+        <span class="chev" style="margin-top:2px">&#9654;</span>
+        <div style="flex:1">
+          <div><b>${esc(cl)}</b> <span class="cn">&middot; ${c.n} comments</span></div>
+          <div class="cmt-rationale">${esc(c.summary)}</div>
+        </div>
+      </div>
+      <div class="bd"><div class="cmt-detail" style="display:none"><div class="muted" style="font-size:11px;text-transform:uppercase;letter-spacing:.05em;margin-bottom:4px">Individual comments</div>${list}</div></div>
+    </div>`;
   }).join('');
   document.getElementById('comments').innerHTML=html;
   document.querySelectorAll('#comments .cmt-node').forEach(n=>n.onclick=()=>{
@@ -751,7 +782,7 @@ function heatmapView(){
     return {bg,fg:'#fff',t:v.toFixed(2)};
   };
   function avg(pos,cl){const xs=D.people.filter(p=>p.position===pos&&p.clusters[cl]!=null).map(p=>p.clusters[cl]);return xs.length?xs.reduce((a,b)=>a+b,0)/xs.length:null;}
-  let html='<table class="heat"><thead><tr><th class="rh">Position \\ Cluster</th>';
+  let html='<table class="heat"><colgroup><col class="rhc">'+CL.map(()=>'<col class="cl">').join('')+'<col class="cl"></colgroup><thead><tr><th class="rh">Position \\ Cluster</th>';
   CL.forEach(c=>html+=`<th title="${esc(c)}">${esc(SHORT[c]||c)}</th>`);
   html+='<th>Overall</th></tr></thead><tbody>';
   fams.forEach(pos=>{
@@ -769,35 +800,53 @@ function heatmapView(){
 /* ---- mind map ---- */
 function mindmap(){
   const fams=POS_ORDER.filter(pos=>D.people.some(p=>p.position===pos));
-  let html='<div class="mm-root">I-LEAD Capability Plan</div>';
+  let branches='';
   fams.forEach(pos=>{
     const ppl=D.people.filter(p=>p.position===pos);
-    // clusters this family needs (any member below 3.0), with count of members needing
     const clusterNeed={};
     ppl.forEach(p=>p.weak_clusters.forEach(w=>{clusterNeed[w.cluster]=(clusterNeed[w.cluster]||0)+1;}));
     const clusters=Object.keys(clusterNeed).sort((a,b)=>clusterNeed[b]-clusterNeed[a]);
-    const kids=clusters.map(cl=>{
+    const withMentor=ppl.find(p=>p.mentor);
+    const leaves=clusters.map(cl=>{
       let who,cls;
       if(UNCOV.has(cl)){who='needs mentor';cls='none';}
-      else{
-        // find a mentor covering this cluster among this family's mentees
-        const m=ppl.map(p=>p.mentor).find(mm=>mm&&mm.focus);
-        who=m?('mentor '+ (m.mentor_shown||m.group||'assigned')):'open';
-        cls=m?'grp':'none';
-        // better: show mentor_shown if any mentee in family has one
-        const withMentor=ppl.find(p=>p.mentor);
-        if(withMentor){who='mentor '+(withMentor.mentor_shown||'assigned');cls='grp';}
-        else{who='open';cls='none';}
-      }
-      return `<div class="mm-cluster"><div class="cl">${esc(SHORT[cl]||cl)} <span class="mm-count">&middot; ${clusterNeed[cl]} need</span></div><div class="who ${cls}">${esc(who)}</div></div>`;
-    }).join('') || '<div class="muted" style="font-size:12px;padding:4px 0">No priority gaps in this family.</div>';
-    html+=`<div class="mm-fam"><div class="node"><span class="chev">&#9654;</span>${esc(pos)} <span class="mm-count">&middot; ${ppl.length} staff, ${clusters.length} gap areas</span></div><div class="kids">${kids}</div></div>`;
+      else if(withMentor){who=(withMentor.mentor_shown||'mentor');cls='grp';}
+      else{who='open';cls='none';}
+      return `<div class="tleaf" data-cluster="${esc(cl)}" title="Click to see everyone who needs this">
+        <div class="tleaf-name">${esc(SHORT[cl]||cl)} <span class="tleaf-go">&rarr;</span></div>
+        <div class="tleaf-meta">${clusterNeed[cl]} need &middot; <span class="who ${cls}">${esc(who)}</span></div>
+      </div>`;
+    }).join('') || '<div class="tleaf tleaf-static"><div class="tleaf-meta muted">No priority gaps</div></div>';
+    const strong = clusters.length===0;
+    branches+=`<div class="tbranch">
+      <div class="tnode tfam ${strong?'tfam-ok':''}">
+        <div class="tfam-name">${esc(pos)}</div>
+        <div class="tfam-meta">${ppl.length} staff &middot; ${clusters.length} gap area${clusters.length===1?'':'s'}</div>
+        <span class="tchevron">&#9654;</span>
+      </div>
+      <div class="tleaves">${leaves}</div>
+    </div>`;
   });
-  const box=document.getElementById('mindmap');box.innerHTML=html;
-  box.querySelectorAll('.mm-fam .node').forEach(n=>n.onclick=()=>n.parentElement.classList.toggle('open'));
+  const box=document.getElementById('mindmap');
+  box.innerHTML=`<div class="tree">
+    <div class="troot-wrap"><div class="tnode troot">I-LEAD<br>Capability Plan</div></div>
+    <div class="tbranches">${branches}</div>
+  </div>`;
+  // click family node -> branch out / collapse (one level at a time)
+  box.querySelectorAll('.tfam').forEach(n=>n.onclick=()=>n.closest('.tbranch').classList.toggle('open'));
+  // click a cluster leaf -> jump to filtered focal persons
+  box.querySelectorAll('.tleaf[data-cluster]').forEach(l=>l.onclick=(e)=>{e.stopPropagation();gotoCluster(l.dataset.cluster);});
 }
-document.getElementById('mmExpand').onclick=()=>document.querySelectorAll('#mindmap .mm-fam').forEach(f=>f.classList.add('open'));
-document.getElementById('mmCollapse').onclick=()=>document.querySelectorAll('#mindmap .mm-fam').forEach(f=>f.classList.remove('open'));
+// navigate to Focal Persons tab, filtered to a training-need cluster
+function gotoCluster(cl){
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('on',t.dataset.p==='people'));
+  document.querySelectorAll('.panel').forEach(p=>p.classList.toggle('on',p.id==='p-people'));
+  const sel=document.getElementById('fcluster'); if(sel){sel.value=cl; renderPeople();}
+  window.scrollTo({top:0,behavior:'smooth'});
+  syncStickyHeaders&&syncStickyHeaders();
+}
+document.getElementById('mmExpand').onclick=()=>document.querySelectorAll('#mindmap .tbranch').forEach(f=>f.classList.add('open'));
+document.getElementById('mmCollapse').onclick=()=>document.querySelectorAll('#mindmap .tbranch').forEach(f=>f.classList.remove('open'));
 
 // keep table headers docked right below the sticky nav bar (fixes header/first-row overlap on scroll)
 function syncStickyHeaders(){
